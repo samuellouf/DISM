@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dism"
+version = "0.0.1"
+authors = [
+  { name="SamuelLouf" },
+]
+description = "Easily use Microsoft's DISM Command-Line Interface in Python."
+readme = "README.md"
+requires-python = ">=3"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python :: 3",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: Microsoft :: Windows :: Windows 10",
+    "Operating System :: Microsoft :: Windows :: Windows 11",
+    "Natural Language :: English",
+    "Topic :: Software Development",
+    "Topic :: System",
+    "Topic :: System :: Boot",
+    "Topic :: System :: Installation/Setup",
+    "Topic :: System :: Operating System",
+]
+
+[project.urls]
+Homepage = "https://github.com/samuellouf/DISM"
+Issues = "https://github.com/samuellouf/DISM/issues"
