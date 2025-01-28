@@ -1,4 +1,4 @@
-# "DISM" Module in Python
+# "DISM" (v0.0.2) Module in Python
 ## Easily use Microsoft's DISM Command-Line Interface in Python.
 This Python module provides an interface for interacting with the Deployment Imaging Service and Management Tool (DISM). It allows you to manage and service Windows images, drivers, packages, and system health using DISM commands through Python scripts.
 

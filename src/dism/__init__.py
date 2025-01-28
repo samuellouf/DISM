@@ -1,6 +1,6 @@
 # DISM Module
 # Short description : Easily use Microsoft's DISM Command-Line Interface in Python.
-# Version : 0.0.1 (the first version, YAY!)
+# Version : 0.0.2
 # Made By : SamuelLouf <https://github.com/samuellouf>
 # Creation date : 11th July 2024
 # GitHub Page <https://github.com/samuellouf/dism>
@@ -21,9 +21,9 @@
 # THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, 
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
 # OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-import subprocess, ctypes, sys
+import subprocess, ctypes, sys, datetime
 
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 
 # Python functions
 def isUserAdmin():
@@ -113,7 +113,7 @@ def restoreHealthExt(external_source, limit_access = False):
     return False
 
 # Working with Windows Images
-def getWimInfo(wim):
+def getWimInfo(wim, index = 1):
   """
     Get infos about wim file.
 
@@ -124,29 +124,97 @@ def getWimInfo(wim):
         data: Index, Name, Description and Size of the wim file
     """
   if not isUserAdmin(): raise OSError('No admin access')
-  r = subprocess.run(['dism', '/English', '/Get-WimInfo', '/wimfile=' + wim], capture_output=True, text=True)
+  r = subprocess.run(['dism', '/English', '/Get-WimInfo', '/wimfile=' + wim, '/Index:' + str(index)], capture_output=True, text=True)
   
   class data:
     def __init__(self):
-      self.index = -1
-      self.name = None
-      self.description = None
-      self.size = -1
+      self.index = self.size = self.version = self.ServicePack_build = self.ServicePack_level = self.directories = self.files = -1
+      self.name = self.description = self.architecture = self.hal = self.edition = self.installation = self.productType = self.productSuite = self.systemRoot = self.defaultLanguage = None
+      self.bootable = False
+      self.created = self.modified = datetime.datetime.now()
+      self.languages = []
+
+  def turnStringIntoDate(string):
+    datetime_ = string.split(' - ')[0].split('/') + string.split(' - ')[1].split(':')
+    for x in range(datetime_.__len__()):
+      datetime_[x] = int(datetime_[x])
+    return datetime.datetime(*(datetime_[2], datetime_[1], datetime_[0], datetime_[3], datetime_[4], datetime_[5]))
   
+  def getLanguages(output, default = False):
+    languages = []
+    lines = output.splitlines()
+
+    for i in range(lines.__len__()):
+      if 'Languages :' in lines[i]:
+        for j in range(lines.__len__() - i):
+          if ('The operation completed successfully.' not in lines[j + i]) and ('Languages :' not in lines[j + i]):
+            lang = lines[j + i].replace(' ', '').replace('\t', '')
+
+            if default == False:
+              if '(Default)' in lang:
+                default = lang.replace('(Default)', '')
+              lang = lang.replace('(Default)', '')
+
+            if lang != '':
+              languages.append(lang)
+
+    if default == False:          
+      return languages
+    else:
+      return (languages, default)
+  
+  def getDefaultLanguage(output):
+    return getLanguages(output, True)[1]
+
   data_ = data()
 
   for line in r.stdout.splitlines():
-    if 'Index : ' in line:
-      data_.index = line.replace('Index : ', '')
+    if ' : ' in line:
+      one = line.split(' : ')[1]
+      match line.split(' : ')[0]:
+        case 'Index':
+          data_.index = int(one)
+        case 'Name':
+          data_.name = one
+        case 'Description':
+          data_.description = one
+        case 'Size':
+          data_.size = int(one.replace('ÿ', '').replace(' bytes', ''))
+        case 'WIM Bootable':
+          data_.bootable = (one == 'Yes')
+        case 'Architecture':
+          data_.architecture = one
+        case 'Hal':
+          data_.hal = one
+        case 'Version':
+          data_.version = one
+        case 'ServicePack Build':
+          data_.ServicePack_build = int(one)
+        case 'ServicePack Level':
+          data_.ServicePack_level = int(one)
+        case 'Edition':
+          data_.edition = one
+        case 'Installation':
+          data_.installation = one
+        case 'ProductType':
+          data_.productType = one
+        case 'ProductSuite':
+          data_.productSuite = one
+        case 'System Root':
+          data_.systemRoot = one
+        case 'Directories':
+          data_.directories = int(one)
+        case 'Files':
+          data_.files = int(one)
+        case 'Created':
+          data_.created = turnStringIntoDate(one)
+        case 'Modified':
+          data_.modified = turnStringIntoDate(one)
+        case _:
+          pass
 
-    if 'Name : ' in line:
-      data_.name = line.replace('Name : ', '')
-
-    if 'Description : ' in line:
-      data_.description = line.replace('Description : ', '')
-
-    if 'Size : ' in line:
-      data_.size = int(line.replace('Size : ', '').replace('ÿ', '').replace(' bytes', ''))
+  data_.languages = getLanguages(r.stdout)
+  data_.defaultLanguage = getDefaultLanguage(r.stdout)
 
   return data_
 
