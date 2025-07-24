@@ -1,6 +1,6 @@
 # DISM Module
 # Short description : Easily use Microsoft's DISM Command-Line Interface in Python.
-# Version : 0.0.2
+# Version : 2.0.0
 # Made By : SamuelLouf <https://github.com/samuellouf>
 # Creation date : 11th July 2024
 # GitHub Page <https://github.com/samuellouf/dism>
@@ -23,7 +23,7 @@
 # OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import subprocess, ctypes, sys, datetime
 
-__version__ = '0.0.2'
+__version__ = '2.0.0'
 
 # Python functions
 def isUserAdmin():
@@ -34,7 +34,7 @@ def giveAdminRightsToProgram():
   """ Tries to get admin rights then return True if the attempt was a success. """
   if not isUserAdmin():
     ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
-    return isUserAdmin()
+  return isUserAdmin()
 
 def init():
   """ Initializes the module """
