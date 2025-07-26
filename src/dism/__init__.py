@@ -1,6 +1,6 @@
 # DISM Module
 # Short description : Easily use Microsoft's DISM Command-Line Interface in Python.
-# Version : 2.0.0
+# Version : 3.0.0
 # Made By : SamuelLouf <https://github.com/samuellouf>
 # Creation date : 11th July 2024
 # GitHub Page <https://github.com/samuellouf/dism>
@@ -23,7 +23,18 @@
 # OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import subprocess, ctypes, sys, datetime
 
-__version__ = '2.0.0'
+__version__ = '3.0.0'
+
+def set_json(obj, path, value, separator = "."):
+  keys = path.split(separator)
+  current = obj
+
+  for key in keys[:-1]:
+    if key not in current or not isinstance(current[key], dict):
+      current[key] = {}
+    current = current[key]
+
+  current[keys[-1]] = value
 
 # Python functions
 def isUserAdmin():
@@ -293,7 +304,7 @@ def removeDriver(mounting_path, driver):
         driver (str): Path to driver to remove from the mounted wim
   """
   if not isUserAdmin(): raise OSError('No admin access')
-  subprocess.run(['dism', '/Image:' + mounting_path, '/Add-Driver', '/Driver:' + driver])
+  subprocess.run(['dism', '/Image:' + mounting_path, '/Remove-Driver', '/Driver:' + driver])
 
 # Capture and Apply Windows Images
 
@@ -325,4 +336,85 @@ def applyImage(wim, apply_dir):
   r = subprocess.run(['dism', '/Apply-Image', '/ImageFile:' + wim, '/Index:1', '/ApplyDir:' + apply_dir, '/English'], capture_output=True, text=True)
   return ('The operation completed successfully.' in r.stdout)
 
+# View/Edit features
+class Feature:
+  _enabled = None
+  def __init__(self, name, enabled):
+    self.name = name
+    self.enabled = enabled
+    
+  @property
+  def enabled(self):
+    return self._enabled
+
+  @enabled.setter
+  def enabled(self, value):
+    if type(value) == bool:
+      self._enabled = value
+
+    if type(value) == str:
+      if value.lower() == "enabled":
+        self._enabled = True
+
+      if value.lower() == "disabled":
+        self._enabled = False
+
+    if type(value) == int:
+      if value == 0:
+        self._enabled = False
+
+      if value == 1:
+        self._enabled = True
+
+def getFeatures():
+  """
+    Get a list of features.
+  
+    Returns :
+        list: List of features
+  """
+  if not isUserAdmin(): raise OSError('No admin access')
+  r = subprocess.run(['dism', '/online', '/Get-Features', '/English'], capture_output=True, text=True)
+  if r.stderr:
+    raise Exception(r.stderr)
+  
+  features_list = []
+  
+  features = r.stdout.split("\n")[8:]
+
+  for i in range(0, (len(features) - 2), 3):
+    features_list.append(Feature(features[i].replace("Feature Name : ", ""), features[i+1].replace("State : ", "")))
+
+  return features_list
+
+class FeatureInfo:
+  def __init__(self, name, display_name, description, restart_required, state, custom):
+    self.name = name
+    self.display_name = display_name
+    self.description = description
+    self.restart_required = restart_required
+    self.state = state
+    self.custom = custom
+
+def getFeatureInfo(name):
+  """
+    Get a list of features.
+
+    Args :
+        name (str): Feature's name
+  
+    Returns :
+        FeatureInfo: Feature info
+  """
+  if not isUserAdmin(): raise OSError('No admin access')
+  r = subprocess.run(['dism', '/online', '/Get-FeatureInfo', f'/FeatureName:{name}', '/English'], capture_output=True, text=True)
+  if r.stderr:
+    raise Exception(r.stderr)
+  
+  custom = {}
+  
+  [set_json(custom, i.split(" : ")[0], " : ".join(i.split(" : ")[1:]), "\\") for i in r.stdout.split("\n")[16:-3]] if ("Custom Properties:" in r.stdout.split("\n")[14:-3]) else []
+  
+  return FeatureInfo(*[" : ".join(i.split(" : ")[1:]) for i in r.stdout.split("\n")[8:13]], custom)
+  
 # END
