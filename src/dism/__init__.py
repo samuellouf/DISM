@@ -1,6 +1,6 @@
 # DISM Module
 # Short description : Easily use Microsoft's DISM Command-Line Interface in Python.
-# Version : 2.0.0
+# Version : 3.0.0
 # Made By : SamuelLouf <https://github.com/samuellouf>
 # Creation date : 11th July 2024
 # GitHub Page <https://github.com/samuellouf/dism>
@@ -23,7 +23,18 @@
 # OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import subprocess, ctypes, sys, datetime
 
-__version__ = '2.0.0'
+__version__ = '3.0.0'
+
+def set_json(obj, path, value, separator = "."):
+  keys = path.split(separator)
+  current = obj
+
+  for key in keys[:-1]:
+    if key not in current or not isinstance(current[key], dict):
+      current[key] = {}
+    current = current[key]
+
+  current[keys[-1]] = value
 
 # Python functions
 def isUserAdmin():
@@ -293,7 +304,7 @@ def removeDriver(mounting_path, driver):
         driver (str): Path to driver to remove from the mounted wim
   """
   if not isUserAdmin(): raise OSError('No admin access')
-  subprocess.run(['dism', '/Image:' + mounting_path, '/Add-Driver', '/Driver:' + driver])
+  subprocess.run(['dism', '/Image:' + mounting_path, '/Remove-Driver', '/Driver:' + driver])
 
 # Capture and Apply Windows Images
 
