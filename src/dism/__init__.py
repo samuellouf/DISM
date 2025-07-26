@@ -336,4 +336,85 @@ def applyImage(wim, apply_dir):
   r = subprocess.run(['dism', '/Apply-Image', '/ImageFile:' + wim, '/Index:1', '/ApplyDir:' + apply_dir, '/English'], capture_output=True, text=True)
   return ('The operation completed successfully.' in r.stdout)
 
+# View/Edit features
+class Feature:
+  _enabled = None
+  def __init__(self, name, enabled):
+    self.name = name
+    self.enabled = enabled
+    
+  @property
+  def enabled(self):
+    return self._enabled
+
+  @enabled.setter
+  def enabled(self, value):
+    if type(value) == bool:
+      self._enabled = value
+
+    if type(value) == str:
+      if value.lower() == "enabled":
+        self._enabled = True
+
+      if value.lower() == "disabled":
+        self._enabled = False
+
+    if type(value) == int:
+      if value == 0:
+        self._enabled = False
+
+      if value == 1:
+        self._enabled = True
+
+def getFeatures():
+  """
+    Get a list of features.
+  
+    Returns :
+        list: List of features
+  """
+  if not isUserAdmin(): raise OSError('No admin access')
+  r = subprocess.run(['dism', '/online', '/Get-Features', '/English'], capture_output=True, text=True)
+  if r.stderr:
+    raise Exception(r.stderr)
+  
+  features_list = []
+  
+  features = r.stdout.split("\n")[8:]
+
+  for i in range(0, (len(features) - 2), 3):
+    features_list.append(Feature(features[i].replace("Feature Name : ", ""), features[i+1].replace("State : ", "")))
+
+  return features_list
+
+class FeatureInfo:
+  def __init__(self, name, display_name, description, restart_required, state, custom):
+    self.name = name
+    self.display_name = display_name
+    self.description = description
+    self.restart_required = restart_required
+    self.state = state
+    self.custom = custom
+
+def getFeatureInfo(name):
+  """
+    Get a list of features.
+
+    Args :
+        name (str): Feature's name
+  
+    Returns :
+        FeatureInfo: Feature info
+  """
+  if not isUserAdmin(): raise OSError('No admin access')
+  r = subprocess.run(['dism', '/online', '/Get-FeatureInfo', f'/FeatureName:{name}', '/English'], capture_output=True, text=True)
+  if r.stderr:
+    raise Exception(r.stderr)
+  
+  custom = {}
+  
+  [set_json(custom, i.split(" : ")[0], " : ".join(i.split(" : ")[1:]), "\\") for i in r.stdout.split("\n")[16:-3]] if ("Custom Properties:" in r.stdout.split("\n")[14:-3]) else []
+  
+  return FeatureInfo(*[" : ".join(i.split(" : ")[1:]) for i in r.stdout.split("\n")[8:13]], custom)
+  
 # END
